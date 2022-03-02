@@ -1,6 +1,6 @@
 # nba-result
 
-Little script for discord bot that will give you NBA result automatically after certain time. The default is after 24 hours, if you want to change that check row 78 and change the times in seconds there.
+Little script for discord bot that will give you NBA result automatically after certain time with box score and link to highlights for the game. The default is after 24 hours, if you want to change that check row 78 and change the times in seconds there.
 
 
 
