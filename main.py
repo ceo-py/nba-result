@@ -1,6 +1,5 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import date
 import re
 import discord
 from discord.ext import commands
@@ -13,7 +12,6 @@ client = commands.Bot(command_prefix="!", help_command=None)
 TOKEN = ("YOUR DISCORD BOT TOKEN HERE")
 DISCORD_CHANNEL_NAME = "nba-result"
 url_start = "https://sports.yahoo.com"
-today = date.today()
 
 
 def getdata(url):
@@ -27,7 +25,7 @@ async def nba(ctx):
         today = datetime.date.today()
         Previous_Date = today - datetime.timedelta(days=1)
         print(Previous_Date)
-        name, score, space, link_game_name, nu, a = "", "", 0, list(), 0, 0
+        link_game_name = list()
         odd_name = list()
         even_name = list()
         odd_score = list()
@@ -39,26 +37,21 @@ async def nba(ctx):
             colour=discord.Colour.blue()
         )
 
-        for link_game in soup.find_all('a', attrs={'href': re.compile("/nba/")}):
+        for nu, link_game in enumerate(soup.find_all('a', attrs={'href': re.compile("/nba/")})):
             if nu > 11:
                 link_game_name.append(link_game.get('href'))
-                nu += 1
-            else:
-                nu += 1
 
-        for name, score in zip(soup.find_all(class_="YahooSans Fw(700)! Fz(14px)!"),
-                               soup.find_all(class_="YahooSans Fw(700)! Va(m) Fz(24px)!")):
-            space += 1
+
+        for space, (name, score) in enumerate(zip(soup.find_all(class_="YahooSans Fw(700)! Fz(14px)!"),
+                               soup.find_all(class_="YahooSans Fw(700)! Va(m) Fz(24px)!"))):
             if (space % 2) == 0:
                 even_name.append(name.get_text())
                 even_score.append(score.get_text())
-                a += 1
             else:
                 odd_name.append(name.get_text())
                 odd_score.append(score.get_text())
 
         for name_o, score_o, name_e, score_e, game_url in zip(odd_name, odd_score, even_name, even_score, link_game_name):
-            game_highlight = ""
             if int(score_o) > int(score_e):
                 html = urllib.request.urlopen(f"https://www.youtube.com/results?search_query={game_url}")
                 video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
