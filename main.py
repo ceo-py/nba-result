@@ -6,11 +6,10 @@ import datetime
 from requests_html import HTMLSession
 
 client = commands.Bot(command_prefix="!", help_command=None)
-TOKEN = ("Your Token HERE!!!")
+TOKEN = ("Your TOKEN HERE!!!")
 DISCORD_CHANNEL_NAME = "nba-result"
 url_start = "https://sports.yahoo.com"
 session = HTMLSession()
-nba_score_results = []
 
 
 def getdata(url):
@@ -19,6 +18,7 @@ def getdata(url):
 
 
 def get_all_info():
+    nba_score_results = []
     today = datetime.date.today()
     previous_date = today - datetime.timedelta(days=1)
     htmldata = getdata(f"https://sports.yahoo.com/nba/scoreboard/?confId=&dateRange={previous_date}&schedState=")
@@ -43,14 +43,14 @@ def get_all_info():
         game_highlight = f"https://www.youtube.com/watch?v={video_ids[1]}"
         nba_score_results.append(
             {"Home Team": home_team.text, "Home Team Score": int(home_team_score.text), "Away Team": away_team.text,
-             "Away Team Score": away_team_score.text, "Game Highlight": game_highlight})
-        return today
+             "Away Team Score": int(away_team_score.text), "Game Highlight": game_highlight})
+    return today, nba_score_results
 
 
 @client.command()
 async def nba(ctx):
     while True:
-        today_ = get_all_info()
+        today_, nba_score_results = get_all_info()
         embed = discord.Embed(
             title=f"NBA Results {today_}",
             colour=discord.Colour.blue()
@@ -60,15 +60,17 @@ async def nba(ctx):
             if show['Home Team Score'] < show['Away Team Score']:
                 stars, ends = "~~", "**"
             embed.add_field(
-                name=f"{stars}{show['Home Team']} : {show['Home Team Score']}{stars}\n{ends}{show['Away Team']} : {show['Away Team Score']}{ends}",
+                name=f"{stars}{show['Home Team']} : {show['Home Team Score']}{stars}\n{ends}{show['Away Team']} : "
+                     f"{show['Away Team Score']}{ends}",
                 value=f"[More Info]({url_start})\n[Highlights]({show['Game Highlight']})",
                 inline=True)
         await ctx.send(embed=embed)
         del nba_score_results
-        time.sleep(86400) ## time in second to delay ----
+        time.sleep(86400)
 
 
 client.run(TOKEN)
+
 
 
 ## bs4 version
