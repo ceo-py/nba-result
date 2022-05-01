@@ -81,7 +81,7 @@ client.run(TOKEN)
 # from requests_html import HTMLSession
 
 # client = commands.Bot(command_prefix="!", help_command=None)
-# TOKEN = ("OTE0ODI1NDI4NjkzMjg2OTEy.YaSrkg.Y-gm0DH6kflekjWO7Lc70MvyaVU")
+# TOKEN = ("YOUR TOKEN HERE")
 # DISCORD_CHANNEL_NAME = "nba-result"
 # url_start = "https://sports.yahoo.com"
 # session = HTMLSession()
