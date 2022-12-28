@@ -1,149 +1,114 @@
 import re
 import discord
-from discord.ext import commands
 import time
+from discord.ext import commands
 import datetime
 from requests_html import HTMLSession
 
-client = commands.Bot(command_prefix="!", help_command=None)
-TOKEN = ("Your TOKEN HERE!!!")
+client = commands.Bot(command_prefix="?", help_command=None, intents=discord.Intents.all())
+TOKEN = "YOUR TOKEN HERE"
 DISCORD_CHANNEL_NAME = "nba-result"
-url_start = "https://sports.yahoo.com"
 session = HTMLSession()
+TEAM_URL = 'https://www.nba.com/'
 
 
-def getdata(url):
+def getdata(url: str) -> object:
     r = session.get(url)
     return r
 
 
-def get_all_info():
-    nba_score_results = []
-    today = datetime.date.today()
-    previous_date = today - datetime.timedelta(days=1)
-    htmldata = getdata(f"https://sports.yahoo.com/nba/scoreboard/?confId=&dateRange={previous_date}&schedState=")
-    for game in range(1, 100):
-        home_team = htmldata.html.xpath(
-            f'//*[@id="scoreboard-group-2"]/div/div[2]/ul/li[{game}]/div/div[1]/a/div/div/div/div[2]/div/ul/li[1]/div[2]/div/span[1]',
-            first=True)
-        if home_team is None:
-            break
-        home_team_score = htmldata.html.xpath(
-            f'//*[@id="scoreboard-group-2"]/div/div[2]/ul/li[{game}]/div/div[1]/a/div/div/div/div[2]/div/ul/li[1]/div[3]/span',
-            first=True)
-        away_team = htmldata.html.xpath(
-            f'//*[@id="scoreboard-group-2"]/div/div[2]/ul/li[{game}]/div/div[1]/a/div/div/div/div[2]/div/ul/li[2]/div[2]/div/span[1]',
-            first=True)
-        away_team_score = htmldata.html.xpath(
-            f'//*[@id="scoreboard-group-2"]/div/div[2]/ul/li[{game}]/div/div[1]/a/div/div/div/div[2]/div/ul/li[2]/div[3]/span[1]',
-            first=True)
-        game_url_you_tube = f"full+game+highlight{home_team.text}+{away_team.text}".replace(" ", "+")
-        game_url_info = getdata(f"https://www.youtube.com/results?search_query={game_url_you_tube}")
-        video_ids = re.findall(r"watch\?v=(\S{11})", game_url_info.text)
-        game_highlight = f"https://www.youtube.com/watch?v={video_ids[1]}"
-        nba_score_results.append(
-            {"Home Team": home_team.text, "Home Team Score": int(home_team_score.text), "Away Team": away_team.text,
-             "Away Team Score": int(away_team_score.text), "Game Highlight": game_highlight})
-    return today, nba_score_results
+def get_current_date():
+    return datetime.date.today()
+
+
+def get_previous_date(current_date: str):
+    return current_date - datetime.timedelta(days=1)
+
+
+def get_url():
+    return f"https://www.nba.com/games?date={get_previous_date(get_current_date())}"
+
+
+async def find_emojis(ctx: object, team_name: str) -> str:
+    for team in ctx.guild.emojis:
+        if team_name in team.name:
+            return str(team)
+
+
+def find_data_from(url: str) -> tuple:
+    html_decode = url
+    games_leaders = html_decode.html.find(".GameCard_gcLeaders__Yn1ru")
+    games_information = html_decode.html.find(".GameCard_gcMain__q1lUW")
+    return games_information, games_leaders
+
+
+def generate_link(link_name: str, url: str) -> str:
+    return f"[{link_name}]({url})"
+
+
+async def find_youtube_video_link(home_team: str, away_team: str, previous_date: str) -> str:
+    game_url_you_tube = f"show+video+from+hooper+full+game+highlights+{home_team}+{away_team}+{previous_date}".replace(
+        " ", "+")
+    game_url_info = getdata(f"https://www.youtube.com/results?search_query={game_url_you_tube}")
+    video_ids = re.findall(r"watch\?v=(\S{11})", game_url_info.text)
+    return f"https://www.youtube.com/watch?v={video_ids[1]}"
+
+
+async def generate_result() -> list:
+    result = []
+    for games, players in zip(*find_data_from(getdata(get_url()))):
+        home_team_name, home_team_record, home_team_score, type_result, away_team_score, away_team_name, away_team_record, *__ = games.text.split(
+            "\n")
+        home_team_player_name, home_team_player_information, home_team_player_pts, home_team_player_reb, home_team_player_ast, \
+        away_team_player_name, away_team_player_information, away_team_player_pts, away_team_player_reb, away_team_player_ast, \
+            = players.text.split("\n")[4:-1]
+
+        result.append(
+            {f"Home": {
+                "Team": {"name": away_team_name.split()[-1], "record": away_team_record, "score": int(away_team_score)},
+                "Player": {"name": away_team_player_name, "information": away_team_player_information,
+                           "pts": away_team_player_pts, "reb": away_team_player_reb,
+                           "ast": away_team_player_ast}},
+                f"Away": {"Team": {"name": home_team_name.split()[-1], "record": home_team_record,
+                                   "score": int(home_team_score)},
+                          "Player": {"name": home_team_player_name, "information": home_team_player_information,
+                                     "pts": home_team_player_pts, "reb": home_team_player_reb,
+                                     "ast": home_team_player_ast}},
+                "Highlights": await find_youtube_video_link(home_team_name, away_team_name,
+                                                            get_previous_date(get_current_date()))})
+    return result
 
 
 @client.command()
 async def nba(ctx):
     while True:
-        today_, nba_score_results = get_all_info()
+        today_, nba_score_results = get_current_date(), await generate_result()
         embed = discord.Embed(
-            title=f"NBA Results {today_}",
-            colour=discord.Colour.blue()
+            title=f"NBA Results for {today_}",
+            colour=discord.Colour.blue(),
         )
+        embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/983670671647313930/1057801162142777454/NBA.png')
         for show in nba_score_results:
-            stars, ends = "**", "~~"
-            if show['Home Team Score'] < show['Away Team Score']:
-                stars, ends = "~~", "**"
+            stars, ends = "**", "__"
+            if show['Home']['Team']['score'] < show['Away']['Team']['score']:
+                stars, ends = "__", "**"
             embed.add_field(
-                name=f"{stars}{show['Home Team']} : {show['Home Team Score']}{stars}\n{ends}{show['Away Team']} : "
-                     f"{show['Away Team Score']}{ends}",
-                value=f"[More Info]({url_start})\n[Highlights]({show['Game Highlight']})",
-                inline=True)
+                name=f"{await find_emojis(ctx, show['Away']['Team']['name'])} "
+                     f"({show['Away']['Team']['record']}) "
+                     f"{stars}{show['Away']['Team']['name'].upper()}{stars} {show['Away']['Team']['score']} @ "
+                     f"{show['Home']['Team']['score']} "
+                     f"{ends}{show['Home']['Team']['name'].upper()}{ends}"
+                     f" ({show['Home']['Team']['record']}) "
+                     f"{await find_emojis(ctx, show['Home']['Team']['name'])} ",
+                value=f"{generate_link(show['Away']['Player']['name'], TEAM_URL + show['Away']['Team']['name'])} "
+                      f"{show['Away']['Player']['pts']}/{show['Away']['Player']['reb']}/{show['Away']['Player']['ast']}\n"
+                      f"{generate_link(show['Home']['Player']['name'], TEAM_URL + show['Home']['Team']['name'])} "
+                      f"{show['Home']['Player']['pts']}/{show['Away']['Player']['reb']}/{show['Home']['Player']['ast']}"
+                      f"\n{generate_link('Highlights', show['Highlights'])}",
+                inline=False)
         await ctx.send(embed=embed)
         del nba_score_results
         time.sleep(86400)
 
 
 client.run(TOKEN)
-
-
-
-## bs4 version
-# import requests
-# from bs4 import BeautifulSoup
-# from datetime import date
-# import re
-# import discord
-# from discord.ext import commands
-# import time
-# import urllib.request
-# import datetime
-
-
-# client = commands.Bot(command_prefix="!", help_command=None)
-# TOKEN = ("your token here")
-# DISCORD_CHANNEL_NAME = "nba-result" # discord channel to show results in
-# url_start = "https://sports.yahoo.com"
-
-
-# def getdata(url):
-#     r = requests.get(url)
-#     return r.text
-
-
-# @client.command()
-# async def nba(ctx):
-#     while True:
-#         today = datetime.date.today()
-#         previous_date = today - datetime.timedelta(days=1)
-#         name, score, space, nu, a = "", "", 0, 0, 0
-#         odd_name = list()
-#         even_name = list()
-#         odd_score = list()
-#         even_score = list()
-#         htmldata = getdata(f"https://sports.yahoo.com/nba/scoreboard/?confId=&dateRange={previous_date}&schedState=")
-#         soup = BeautifulSoup(htmldata, 'html.parser')
-#         embed = discord.Embed(
-#             title=f"NBA Results {today}",
-#             colour=discord.Colour.blue()
-#         )
-#         for name, score in zip(soup.find_all(class_="YahooSans Fw(700)! Fz(14px)!"),
-#                                soup.find_all(class_="YahooSans Fw(700)! Va(m) Fz(24px)!")):
-#             space += 1
-#             if (space % 2) == 0:
-#                 even_name.append(name.get_text())
-#                 even_score.append(score.get_text())
-#                 a += 1
-#             else:
-#                 odd_name.append(name.get_text())
-#                 odd_score.append(score.get_text())
-
-#         for name_o, score_o, name_e, score_e in zip(odd_name, odd_score, even_name, even_score):
-#             game_url = f"{name_o}+{name_e}".replace(" ", "+")
-#             if int(score_o) > int(score_e):
-#                 html = urllib.request.urlopen(f"https://www.youtube.com/results?search_query={game_url}")
-#                 video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
-#                 game_highlight = (f"https://www.youtube.com/watch?v={video_ids[0]}")
-#                 embed.add_field(name=f"**{name_o} : {score_o}**\n~~{name_e} : {score_e}~~",
-#                                 value=f"[More Info]({url_start})\n[Highlights]({game_highlight})",
-#                                 inline=True)
-#             else:
-#                 html = urllib.request.urlopen(f"https://www.youtube.com/results?search_query={game_url}")
-#                 video_ids = re.findall(r"watch\?v=(\S{11})", html.read().decode())
-#                 game_highlight = (f"https://www.youtube.com/watch?v={video_ids[0]}")
-#                 embed.add_field(name=f"~~{name_o} : {score_o}~~\n**{name_e} : {score_e}**",
-#                                 value=f"[More Info]({url_start})\n[Highlights]({game_highlight})",
-#                                 inline=True)
-
-#         await ctx.send(embed=embed)
-#         time.sleep(86400) # time in seconds -------------
-
-
-# client.run(TOKEN)
-
-
