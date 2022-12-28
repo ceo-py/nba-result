@@ -1,16 +1,13 @@
 # nba-result
+This is a discord bot that will give you information on NBA games.
+Every day on time that you specify it will scrape, nba.com. After that it will look on YouTube for every game that was played and it will find video highlight for it.
+You can expect to see the result as show below.
 
-Little script for discord bot that will give you NBA result automatically after certain time with box score and link to highlight video for the game. The default is after 24 hours, if you want to change that check row 78 and change the times in seconds there.
-
-![image](https://user-images.githubusercontent.com/87097003/156428805-239079dc-1c16-49c9-bad6-efda8ba30ff3.png)
 
 
-24h - 86400
 
-12h - 43200
+![image](https://cdn.discordapp.com/attachments/983670671647313930/1057807928465313872/image.png)
 
-6h - 21600
 
-3h - 10800
 
-1h - 3600
+If you want to see the bot in action you can do that here - https://discord.gg/gCcfWpMCgE
