@@ -1,15 +1,17 @@
-import re
-import discord
-import time
-from discord.ext import commands
 import datetime
+import discord
+import os
+import re
+
+from discord.ext import commands, tasks
+from dotenv import load_dotenv
 from requests_html import HTMLSession
 
-client = commands.Bot(command_prefix="!", help_command=None, intents=discord.Intents.all())
-TOKEN = "YOUR TOKEN HERE"
+client = commands.Bot(command_prefix="?", help_command=None, intents=discord.Intents.all())
 DISCORD_CHANNEL_NAME = "nba-result"
-session = HTMLSession()
 TEAM_URL = 'https://www.nba.com/'
+session = HTMLSession()
+load_dotenv()
 
 
 def getdata(url: str) -> object:
@@ -59,14 +61,11 @@ async def generate_result() -> list:
     for games, players in zip(*find_data_from(getdata(get_url()))):
         home_team_name, home_team_record, home_team_score, type_result, away_team_score, away_team_name, away_team_record, *__ = games.text.split(
             "\n")
-        try:
-            home_team_player_name, home_team_player_information, home_team_player_pts, home_team_player_reb, home_team_player_ast, \
-            away_team_player_name, away_team_player_information, away_team_player_pts, away_team_player_reb, away_team_player_ast, \
-                = players.text.split("\n")[4:-1]
-        except ValueError:
-            home_team_player_name, home_team_player_information, home_team_player_pts, home_team_player_reb, home_team_player_ast, \
-            away_team_player_name, away_team_player_information, away_team_player_pts, away_team_player_reb, away_team_player_ast, \
-                = players.text.split("\n")[4:]
+        players = players.text.split("\n")
+
+        home_team_player_name, home_team_player_information, home_team_player_pts, home_team_player_reb, home_team_player_ast, \
+        away_team_player_name, away_team_player_information, away_team_player_pts, away_team_player_reb, away_team_player_ast, \
+            = players[4:] if len(players) != 15 else players[4:-1]
 
         result.append(
             {f"Home": {
@@ -84,36 +83,50 @@ async def generate_result() -> list:
     return result
 
 
+async def show_result(ctx) -> None:
+    today_, nba_score_results = get_current_date(), await generate_result()
+    embed = discord.Embed(
+        title=f"NBA Results for {today_}",
+        colour=discord.Colour.blue(),
+    )
+    embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/983670671647313930/1057801162142777454/NBA.png')
+    for show in nba_score_results:
+        stars, ends = "**", "__"
+        if show['Home']['Team']['score'] < show['Away']['Team']['score']:
+            stars, ends = "__", "**"
+        embed.add_field(
+            name=f"{await find_emojis(ctx, show['Away']['Team']['name'])} "
+                 f"({show['Away']['Team']['record']}) "
+                 f"{stars}{show['Away']['Team']['name'].upper()}{stars} {show['Away']['Team']['score']} @ "
+                 f"{show['Home']['Team']['score']} "
+                 f"{ends}{show['Home']['Team']['name'].upper()}{ends}"
+                 f" ({show['Home']['Team']['record']}) "
+                 f"{await find_emojis(ctx, show['Home']['Team']['name'])} ",
+            value=f"{generate_link(show['Away']['Player']['name'], TEAM_URL + show['Away']['Team']['name'])} "
+                  f"{show['Away']['Player']['pts']}/{show['Away']['Player']['reb']}/{show['Away']['Player']['ast']}\n"
+                  f"{generate_link(show['Home']['Player']['name'], TEAM_URL + show['Home']['Team']['name'])} "
+                  f"{show['Home']['Player']['pts']}/{show['Away']['Player']['reb']}/{show['Home']['Player']['ast']}"
+                  f"\n{generate_link('Highlights', show['Highlights'])}",
+            inline=False)
+    await ctx.send(embed=embed)
+
+
+@tasks.loop(seconds=0)
+async def task_loop(ctx):
+    await show_result(ctx)
+
+
 @client.command()
-async def nba(ctx):
-    while True:
-        today_, nba_score_results = get_current_date(), await generate_result()
-        embed = discord.Embed(
-            title=f"NBA Results for {today_}",
-            colour=discord.Colour.blue(),
-        )
-        embed.set_thumbnail(url='https://cdn.discordapp.com/attachments/983670671647313930/1057801162142777454/NBA.png')
-        for show in nba_score_results:
-            stars, ends = "**", "__"
-            if show['Home']['Team']['score'] < show['Away']['Team']['score']:
-                stars, ends = "__", "**"
-            embed.add_field(
-                name=f"{await find_emojis(ctx, show['Away']['Team']['name'])} "
-                     f"({show['Away']['Team']['record']}) "
-                     f"{stars}{show['Away']['Team']['name'].upper()}{stars} {show['Away']['Team']['score']} @ "
-                     f"{show['Home']['Team']['score']} "
-                     f"{ends}{show['Home']['Team']['name'].upper()}{ends}"
-                     f" ({show['Home']['Team']['record']}) "
-                     f"{await find_emojis(ctx, show['Home']['Team']['name'])} ",
-                value=f"{generate_link(show['Away']['Player']['name'], TEAM_URL + show['Away']['Team']['name'])} "
-                      f"{show['Away']['Player']['pts']}/{show['Away']['Player']['reb']}/{show['Away']['Player']['ast']}\n"
-                      f"{generate_link(show['Home']['Player']['name'], TEAM_URL + show['Home']['Team']['name'])} "
-                      f"{show['Home']['Player']['pts']}/{show['Away']['Player']['reb']}/{show['Home']['Player']['ast']}"
-                      f"\n{generate_link('Highlights', show['Highlights'])}",
-                inline=False)
-        await ctx.send(embed=embed)
-        del nba_score_results
-        time.sleep(86400)
+async def nba_start(ctx, time_value):
+    task_loop.change_interval(hours=float(time_value))
+    await ctx.send(f"```It's set on every {time_value}h to show the results!```")
+    task_loop.start(ctx)
 
 
-client.run(TOKEN)
+@client.command()
+async def nba_stop(ctx):
+    await ctx.send(f"```It's canceled!```")
+    task_loop.cancel()
+
+
+client.run(os.getenv("TOKEN"))
