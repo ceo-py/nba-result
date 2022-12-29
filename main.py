@@ -5,7 +5,7 @@ from discord.ext import commands
 import datetime
 from requests_html import HTMLSession
 
-client = commands.Bot(command_prefix="?", help_command=None, intents=discord.Intents.all())
+client = commands.Bot(command_prefix="!", help_command=None, intents=discord.Intents.all())
 TOKEN = "YOUR TOKEN HERE"
 DISCORD_CHANNEL_NAME = "nba-result"
 session = HTMLSession()
@@ -17,7 +17,7 @@ def getdata(url: str) -> object:
     return r
 
 
-def get_current_date():
+def get_current_date() -> str:
     return datetime.date.today()
 
 
@@ -25,7 +25,7 @@ def get_previous_date(current_date: str):
     return current_date - datetime.timedelta(days=1)
 
 
-def get_url():
+def get_url() -> str:
     return f"https://www.nba.com/games?date={get_previous_date(get_current_date())}"
 
 
