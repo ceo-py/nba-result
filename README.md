@@ -11,9 +11,9 @@ Where the number 24 represent after how many hours the bot will show results aga
 ```code
 !nba_stop
 ```
-With this one you will stop the current time when results are shown.
+With this one, you will stop the current time when results are shown.
 
-[Invate me here](https://discord.com/api/oauth2/authorize?client_id=914825428693286912&permissions=2048&scope=bot)
+[Invite me here](https://discord.com/api/oauth2/authorize?client_id=914825428693286912&permissions=2048&scope=bot)
 
 You can expect to see the result as show below.
 
@@ -21,4 +21,4 @@ You can expect to see the result as show below.
 
 
 
-If you want to see the bot in action you can do that here - https://discord.gg/gCcfWpMCgE
+If you want to see the bot in action, you can do that here - https://discord.gg/gCcfWpMCgE
