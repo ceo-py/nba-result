@@ -59,9 +59,14 @@ async def generate_result() -> list:
     for games, players in zip(*find_data_from(getdata(get_url()))):
         home_team_name, home_team_record, home_team_score, type_result, away_team_score, away_team_name, away_team_record, *__ = games.text.split(
             "\n")
-        home_team_player_name, home_team_player_information, home_team_player_pts, home_team_player_reb, home_team_player_ast, \
-        away_team_player_name, away_team_player_information, away_team_player_pts, away_team_player_reb, away_team_player_ast, \
-            = players.text.split("\n")[4:-1]
+        try:
+            home_team_player_name, home_team_player_information, home_team_player_pts, home_team_player_reb, home_team_player_ast, \
+            away_team_player_name, away_team_player_information, away_team_player_pts, away_team_player_reb, away_team_player_ast, \
+                = players.text.split("\n")[4:-1]
+        except ValueError:
+            home_team_player_name, home_team_player_information, home_team_player_pts, home_team_player_reb, home_team_player_ast, \
+            away_team_player_name, away_team_player_information, away_team_player_pts, away_team_player_reb, away_team_player_ast, \
+                = players.text.split("\n")[4:]
 
         result.append(
             {f"Home": {
