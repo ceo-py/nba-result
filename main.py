@@ -7,7 +7,7 @@ from discord.ext import commands, tasks
 from dotenv import load_dotenv
 from requests_html import HTMLSession
 
-client = commands.Bot(command_prefix="?", help_command=None, intents=discord.Intents.all())
+client = commands.Bot(command_prefix="!", help_command=None, intents=discord.Intents.all())
 DISCORD_CHANNEL_NAME = "nba-result"
 TEAM_URL = 'https://www.nba.com/'
 session = HTMLSession()
