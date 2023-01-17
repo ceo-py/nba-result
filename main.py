@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from requests_html import HTMLSession
 
 client = commands.Bot(
-    command_prefix="?", help_command=None, intents=discord.Intents.all()
+    command_prefix="!", help_command=None, intents=discord.Intents.all()
 )
 TEAM_URL = "https://www.nba.com/"
 session = HTMLSession()
