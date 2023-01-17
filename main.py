@@ -15,7 +15,7 @@ session = HTMLSession()
 load_dotenv()
 
 
-def getdata(url: str) -> object:
+def getdata(url: str) -> session:
     r = session.get(url)
     return r
 
@@ -60,7 +60,7 @@ def generate_link(link_name: str, url: str) -> str:
 
 async def find_youtube_video_link(
     home_team: str, away_team: str, previous_date: str
-) -> str:
+) -> tuple:
     game_url_you_tube = f"show+video+from+hooper+full+game+highlights+{home_team}+{away_team}+{previous_date}".replace(
         " ", "+"
     )
@@ -71,7 +71,7 @@ async def find_youtube_video_link(
     return (f"https://www.youtube.com/watch?v={video_ids[x]}" for x in range(2, 5))
 
 
-def get_all_channels_id(client: client) -> list:
+def get_all_channels_id(client: client) -> tuple:
     return (
         channel.id
         for server in client.guilds
@@ -128,9 +128,8 @@ async def generate_result() -> list:
     return result
 
 
-async def show_result(ctx: client) -> None:
-    youtube, today_, nba_score_results = (
-        "youtube",
+async def show_result(ctx: client) -> discord.Embed:
+    today_, nba_score_results = (
         get_current_date(),
         await generate_result(),
     )
@@ -153,24 +152,20 @@ async def show_result(ctx: client) -> None:
             f"{ends}{show['Home']['Team']['name'].upper()}{ends}"
             f" ({show['Home']['Team']['record']}) "
             f"{await find_emojis(ctx, show['Home']['Team']['name'])} ",
-            value="\n",
+            value=f"**Game Leaders**\n{show['Away']['Player']['name']}\n"
+            f"{show['Home']['Player']['name']}\n"
+            f"{await find_emojis(ctx, 'youtube')} **Highlights** {', '.join(generate_link(f'Link {pos}', link) for pos, link in enumerate(show['Highlights'], 1))}",
             inline=False,
         )
-        embed.add_field(
-            name="Game Leaders",
-            value=f"{show['Away']['Player']['name']}\n"
-            f"{show['Home']['Player']['name']}\n"
-            f"{await find_emojis(ctx, youtube)} **Highlights** {', '.join(generate_link(f'Link {pos}', link) for pos, link in enumerate(show['Highlights'], 1))}",
-            inline=True,
-        )
-    await ctx.send(embed=embed)
+    return embed
 
 
 @tasks.loop(seconds=0)
-async def task_loop():
+async def task_loop() -> None:
+    embed_result = await show_result(client.get_channel(917894815016955965))
     for id_channel in get_all_channels_id(client):
         ctx = client.get_channel(id_channel)
-        await show_result(ctx)
+        await ctx.send(embed=embed_result)
 
 
 @client.command()
@@ -186,4 +181,3 @@ async def nba_start(ctx: client, time_value: float) -> None:
 
 
 client.run(os.getenv("TOKEN"))
-
