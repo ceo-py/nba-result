@@ -85,7 +85,7 @@ async def generate_result() -> list:
     team_scores, team_names, team_records, player_stats = find_data_from(
         getdata(get_url())
     )
-    for i in range(len(team_scores) // 2):
+    for i in range(0, len(team_scores), 2):
         away_team_name = team_names[i].text
         home_team_name = team_names[i + 1].text
         away_team_record = team_records[i].text
@@ -101,7 +101,7 @@ async def generate_result() -> list:
 
         result.append(
             {
-                f"Home": {
+                f"Away": {
                     "Team": {
                         "name": away_team_name,
                         "record": away_team_record,
@@ -109,7 +109,7 @@ async def generate_result() -> list:
                     },
                     "Player": {"name": away_team_player_name},
                 },
-                f"Away": {
+                f"Home": {
                     "Team": {
                         "name": home_team_name,
                         "record": home_team_record,
