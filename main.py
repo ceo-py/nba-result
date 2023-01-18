@@ -28,6 +28,12 @@ def get_previous_date(current_date: str):
     return current_date - datetime.timedelta(days=1)
 
 
+def convert_data_time(data_to_convert: datetime) -> str:
+    return (
+        f"{data_to_convert.strftime('%b')}+{data_to_convert.day}+{data_to_convert.year}"
+    )
+
+
 def get_url() -> str:
     return f"https://www.nba.com/games?date={get_previous_date(get_current_date())}"
 
@@ -61,14 +67,17 @@ def generate_link(link_name: str, url: str) -> str:
 async def find_youtube_video_link(
     home_team: str, away_team: str, previous_date: str
 ) -> tuple:
-    game_url_you_tube = f"show+video+from+hooper+full+game+highlights+{home_team}+{away_team}+{previous_date}".replace(
-        " ", "+"
-    )
-    game_url_info = getdata(
-        f"https://www.youtube.com/results?search_query={game_url_you_tube}"
-    )
-    video_ids = re.findall(r"watch\?v=(\S{11})", game_url_info.text)
-    return (f"https://www.youtube.com/watch?v={video_ids[x]}" for x in range(2, 5))
+    channels_to_search_from = ("CCBN", "Hooper")
+    find_videos = []
+    for channel in channels_to_search_from:
+        game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{convert_data_time(previous_date)}".replace(
+            " ", "+"
+        )
+        game_url_info = getdata(
+            f"https://www.youtube.com/results?search_query={game_url_you_tube}&sp=EgYIAhABGAM%253D"
+        )
+        find_videos += re.findall(r"watch\?v=(\S{11})", game_url_info.text)
+    return (f"https://www.youtube.com/watch?v={x}" for x in find_videos[:5])
 
 
 def get_all_channels_id(client: client) -> tuple:
@@ -141,13 +150,16 @@ async def show_result(ctx: client) -> discord.Embed:
         url="https://cdn.discordapp.com/attachments/983670671647313930/1057801162142777454/NBA.png"
     )
     for show in nba_score_results:
-        stars, ends = "**", "__"
-        if show["Home"]["Team"]["score"] < show["Away"]["Team"]["score"]:
-            stars, ends = "__", "**"
+        starts, ends = (
+            ("**", "__")
+            if show["Home"]["Team"]["score"] > show["Away"]["Team"]["score"]
+            else ("__", "**")
+        )
+
         embed.add_field(
             name=f"{await find_emojis(ctx, show['Away']['Team']['name'])} "
             f"({show['Away']['Team']['record']}) "
-            f"{stars}{show['Away']['Team']['name'].upper()}{stars} {show['Away']['Team']['score']} @ "
+            f"{starts}{show['Away']['Team']['name'].upper()}{starts} {show['Away']['Team']['score']} @ "
             f"{show['Home']['Team']['score']} "
             f"{ends}{show['Home']['Team']['name'].upper()}{ends}"
             f" ({show['Home']['Team']['record']}) "
