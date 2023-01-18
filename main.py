@@ -86,8 +86,8 @@ async def generate_result() -> list:
         getdata(get_url())
     )
     for i in range(0, len(team_scores), 2):
-        away_team_name = team_names[i].text
-        home_team_name = team_names[i + 1].text
+        away_team_name = team_names[i].text.split()[-1]
+        home_team_name = team_names[i + 1].text.split()[-1]
         away_team_record = team_records[i].text
         home_team_record = team_records[i + 1].text
         away_team_score = team_scores[i].text
