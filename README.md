@@ -1,7 +1,7 @@
 # nba-result
 
 This is a discord bot that will give you information on NBA games, results, the best player statistics on both teams and
-YouTube video highlights on the game with 3 different links.
+YouTube video highlights on the game with up to 5 different links.
 
 Installation:
 
@@ -14,6 +14,6 @@ nba-result
 
 Every day after the games are finished, you will receive a message like the one below.
 
-![image](https://cdn.discordapp.com/attachments/983670671647313930/1064980985155965058/image.png)
+![image](https://cdn.discordapp.com/attachments/983670671647313930/1065211029967089674/image.png)
 
 If you want to see the bot in action, you can do that here - https://discord.gg/gCcfWpMCgE
