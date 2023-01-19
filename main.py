@@ -11,7 +11,7 @@ client = commands.Bot(
     command_prefix="!", help_command=None, intents=discord.Intents.all()
 )
 TEAM_URL = "https://www.nba.com/"
-channels_to_search_from = ("CCBN", "Hooper", "The Asylum", "FreeDawkins")
+VIDEO_CHANNELS = ("CCBN", "Hooper", "The Asylum", "FreeDawkins")
 session = HTMLSession()
 load_dotenv()
 
@@ -78,7 +78,7 @@ async def find_youtube_video_link(
 ) -> tuple:
 
     find_videos = []
-    for channel in channels_to_search_from:
+    for channel in VIDEO_CHANNELS:
         game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{convert_data_time(previous_date)}".replace(
             " ", "+"
         )
