@@ -11,6 +11,7 @@ client = commands.Bot(
     command_prefix="!", help_command=None, intents=discord.Intents.all()
 )
 TEAM_URL = "https://www.nba.com/"
+channels_to_search_from = ("CCBN", "Hooper", "The Asylum", "FreeDawkins")
 session = HTMLSession()
 load_dotenv()
 
@@ -26,6 +27,14 @@ def get_current_date() -> str:
 
 def get_previous_date(current_date: str):
     return current_date - datetime.timedelta(days=1)
+
+
+def get_emoji(emoji: str) -> str:
+    emojis = {
+        "right_arrow": "<a:9410pinkarrowR:1065603946858684526>",
+        "left_arrow": "<a:9410pinkarrowL:1065610532679340112>"
+    }
+    return emojis.get(emoji, "None")
 
 
 def convert_data_time(data_to_convert: datetime) -> str:
@@ -67,7 +76,7 @@ def generate_link(link_name: str, url: str) -> str:
 async def find_youtube_video_link(
     home_team: str, away_team: str, previous_date: str
 ) -> tuple:
-    channels_to_search_from = ("CCBN", "Hooper")
+
     find_videos = []
     for channel in channels_to_search_from:
         game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{convert_data_time(previous_date)}".replace(
@@ -150,18 +159,18 @@ async def show_result(ctx: client) -> discord.Embed:
         url="https://cdn.discordapp.com/attachments/983670671647313930/1057801162142777454/NBA.png"
     )
     for show in nba_score_results:
-        starts, ends = (
-            ("**", "__")
+        home_sing, away_sing = (
+            ("", get_emoji("left_arrow"))
             if show["Home"]["Team"]["score"] > show["Away"]["Team"]["score"]
-            else ("__", "**")
+            else (get_emoji("right_arrow"), "")
         )
 
         embed.add_field(
             name=f"{await find_emojis(ctx, show['Away']['Team']['name'])} "
             f"({show['Away']['Team']['record']}) "
-            f"{starts}{show['Away']['Team']['name'].upper()}{starts} {show['Away']['Team']['score']} @ "
+            f"{show['Away']['Team']['name'].upper()}{home_sing} {show['Away']['Team']['score']} @ "
             f"{show['Home']['Team']['score']} "
-            f"{ends}{show['Home']['Team']['name'].upper()}{ends}"
+            f"{away_sing}{show['Home']['Team']['name'].upper()}"
             f" ({show['Home']['Team']['record']}) "
             f"{await find_emojis(ctx, show['Home']['Team']['name'])} ",
             value=f"**Game Leaders**\n{show['Away']['Player']['name']}\n"
