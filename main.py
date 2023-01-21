@@ -1,11 +1,10 @@
 import datetime
 import discord
-import os
 import re
 
 from discord.ext import commands, tasks
-from dotenv import load_dotenv
-from requests_html import HTMLSession
+from find_streams import scrape_all_games, HTMLSession, os
+
 
 client = commands.Bot(
     command_prefix="!", help_command=None, intents=discord.Intents.all()
@@ -13,7 +12,6 @@ client = commands.Bot(
 TEAM_URL = "https://www.nba.com/"
 VIDEO_CHANNELS = ("CCBN", "Hooper", "The Asylum", "FreeDawkins")
 session = HTMLSession()
-load_dotenv()
 
 
 def getdata(url: str) -> session:
@@ -28,13 +26,6 @@ def get_current_date() -> str:
 def get_previous_date(current_date: str):
     return current_date - datetime.timedelta(days=1)
 
-
-def get_emoji(emoji: str) -> str:
-    emojis = {
-        "right_arrow": "<a:9410pinkarrowR:1065603946858684526>",
-        "left_arrow": "<a:9410pinkarrowL:1065610532679340112>"
-    }
-    return emojis.get(emoji, "None")
 
 
 def convert_data_time(data_to_convert: datetime) -> str:
@@ -96,6 +87,10 @@ def get_all_channels_id(client: client) -> tuple:
         for channel in server.channels
         if channel.name == os.getenv("DISCORD_CHANNEL_NAME")
     )
+
+
+def get_nba_team_names(data: str) -> tuple:
+    return [x.split()[-1] for x in data.split(" vs ")]
 
 
 async def generate_result() -> list:
@@ -160,9 +155,9 @@ async def show_result(ctx: client) -> discord.Embed:
     )
     for show in nba_score_results:
         home_sing, away_sing = (
-            ("", get_emoji("left_arrow"))
+            ("", await find_emojis(ctx, '9410pinkarrowL'))
             if show["Home"]["Team"]["score"] > show["Away"]["Team"]["score"]
-            else (get_emoji("right_arrow"), "")
+            else (await find_emojis(ctx, '9410pinkarrowR'), "")
         )
 
         embed.add_field(
@@ -199,6 +194,35 @@ async def nba_start(ctx: client, time_value: float) -> None:
             f"```It's set on every {int(time_value)}h to show the results!```"
         )
         task_loop.start()
+
+
+@client.command()
+async def live(ctx: client) -> None:
+    live_games = scrape_all_games(os.getenv('NBA'))
+
+    embed = discord.Embed(
+        title=f"NBA Live Games",
+        colour=discord.Colour.blue(),
+    )
+    embed.set_thumbnail(
+        url="https://cdn.discordapp.com/attachments/983670671647313930/1066494679866146866/live.gif"
+    )
+
+    for k, v in live_games.items():
+        away_team, home_team = get_nba_team_names(k)
+        links = []
+        for pos, link in enumerate(v, 1):
+            gen_link = generate_link(f"Link {pos}", link)
+            if len(gen_link) + sum(len(x) for x in links) > 1000:
+                break
+            links.append(gen_link)
+        embed.add_field(
+            name=f"{await find_emojis(ctx, away_team)} **{k}** {await find_emojis(ctx, home_team)}",
+            value=f"{await find_emojis(ctx, '3716_ArrowRightGlow')} {', '.join(links)}",
+            inline=False,
+        )
+
+    await ctx.send(embed=embed)
 
 
 client.run(os.getenv("TOKEN"))
