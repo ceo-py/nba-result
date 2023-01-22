@@ -9,11 +9,15 @@ session = HTMLSession()
 
 
 def get_url(url: str) -> HTMLSession:
-    return session.get(url).text
+    return session.get(url)
 
 
-def generate_stream_data(url):
-    file_html = get_url(url)
+def get_nba_team_names(data: str) -> tuple:
+    return [x.split()[-1] for x in data.split(" vs ")]
+
+
+def generate_stream_data(url) -> dict:
+    file_html = get_url(url).text
     start_index = file_html.find("props") - 2
     end_index = file_html.find("next-route-announcer") - 22
     return json.loads(file_html[start_index:end_index])["props"]["pageProps"]
@@ -23,7 +27,24 @@ def generate_game_address(data: dict) -> tuple:
     return data["metaTags"]["match_uuid"], data["metaTags"]["uuid"]
 
 
-def find_game_links(url):
+def generate_link(link_name: str, url: str) -> str:
+    return f"[{link_name}]({url})"
+
+
+def generate_link_correct_len(data: list) -> list:
+    links = []
+    for pos, link in enumerate(data, 1):
+        gen_link = generate_link(f"Link {pos}", link)
+
+        if len(gen_link) + sum(len(x) for x in links) > 1000:
+            break
+
+        links.append(gen_link)
+
+    return links
+
+
+def find_game_links(url) -> list:
     data = generate_stream_data(url)
     match_uuid, uuid = generate_game_address(data)
     result = []
@@ -45,7 +66,7 @@ def find_game_links(url):
     return result
 
 
-def scrape_all_games(url):
+def scrape_all_games(url: HTMLSession) -> dict:
     data = generate_stream_data(url)
     games_location = data["events"]
     try_next_games = 0
@@ -63,9 +84,13 @@ def scrape_all_games(url):
                 try_next_games = 0
             else:
                 try_next_games += 1
-            if try_next_games == 3:
+            if try_next_games == 2:
                 break
-        except:
+        except KeyError:
             pass
 
     return result
+
+
+def find_specific_game_all_sports(url: HTMLSession):
+    ...
