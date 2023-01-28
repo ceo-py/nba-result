@@ -13,48 +13,43 @@ from find_streams import (
 )
 
 client = commands.Bot(
-    command_prefix="?", help_command=None, intents=discord.Intents.all()
+    command_prefix="!", help_command=None, intents=discord.Intents.all()
 )
 
 
-def get_current_date() -> str:
+async def get_current_date() -> str:
     return datetime.date.today()
 
 
-def get_previous_date(current_date: str) -> datetime:
+async def get_previous_date(current_date: str) -> datetime:
     return current_date - datetime.timedelta(days=1)
 
 
-def convert_data_time(data_to_convert: datetime) -> str:
+async def convert_data_time(data_to_convert: datetime) -> str:
     return (
         f"{data_to_convert.strftime('%b')}+{data_to_convert.day}+{data_to_convert.year}"
     )
 
 
-def generate_url() -> str:
-    return f"https://www.nba.com/games?date={get_previous_date(get_current_date())}"
+async def generate_url() -> str:
+    return f"{os.getenv('START_URL_GAMES')}{await get_previous_date(await get_current_date())}"
 
 
 async def find_emojis(ctx: client, look_for_emoji: str) -> str:
     for emoji in ctx.guild.emojis:
         if look_for_emoji in emoji.name:
             return str(emoji)
+    return ""
 
 
-def generate_player_output(player_data: str, team_name: str) -> str:
+async def generate_player_output(player_data: str, team_name: str) -> str:
     data = player_data.split("\n")
-    player_link = generate_link(data[0], os.getenv("TEAM_URL") + team_name)
+    player_link = await generate_link(data[0], os.getenv("TEAM_URL") + team_name)
     return f"{player_link} {data[-3]}/{data[-2]}/{data[-1]}"
 
 
-def find_data_from(url: object) -> tuple:
-    classes_to_look_for = (
-        ".MatchupCardScore_p__dfNvc",
-        ".MatchupCardTeamName_teamName__9YaBA",
-        ".MatchupCardTeamRecord_record__20YHe",
-        ".GameCardLeaders_gclRow__VMSee",
-    )
-    return (url.html.find(f"{x}") for x in classes_to_look_for)
+async def find_data_from(url: object) -> tuple:
+    return (url.html.find(f"{x}") for x in os.getenv("LOOK_FOR_DATA").split(", "))
 
 
 async def find_youtube_video_link(
@@ -63,17 +58,17 @@ async def find_youtube_video_link(
 
     find_videos = []
     for channel in os.getenv("VIDEO_CHANNELS").split(", "):
-        game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{convert_data_time(previous_date)}".replace(
+        game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{await convert_data_time(previous_date)}".replace(
             " ", "+"
         )
-        game_url_info = get_url(
-            f"https://www.youtube.com/results?search_query={game_url_you_tube}&sp=EgYIAhABGAM%253D"
+        game_url_info = await get_url(
+            f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}{os.getenv('CRITERIA')}"
         )
         find_videos += re.findall(r"watch\?v=(\S{11})", game_url_info.text)
-    return (f"https://www.youtube.com/watch?v={x}" for x in find_videos[:5])
+    return (f"{os.getenv('YOUTUBE_VIDEO_LINK')}{x}" for x in find_videos[:5])
 
 
-def get_all_channels_id(client: client) -> tuple:
+async def get_all_channels_id(client: client) -> tuple:
     return (
         channel.id
         for server in client.guilds
@@ -84,8 +79,8 @@ def get_all_channels_id(client: client) -> tuple:
 
 async def generate_result() -> list:
     result = []
-    team_scores, team_names, team_records, player_stats = find_data_from(
-        get_url(generate_url())
+    team_scores, team_names, team_records, player_stats = await find_data_from(
+        await get_url(await generate_url())
     )
     for i in range(0, len(team_scores), 2):
         away_team_name = team_names[i].text.split()[-1]
@@ -94,11 +89,18 @@ async def generate_result() -> list:
         home_team_record = team_records[i + 1].text
         away_team_score = team_scores[i].text
         home_team_score = team_scores[i + 1].text
-        away_team_player_name = generate_player_output(
+        away_team_player_name = await generate_player_output(
             player_stats[i].text, away_team_name
         )
-        home_team_player_name = generate_player_output(
+        home_team_player_name = await generate_player_output(
             player_stats[i + 1].text, home_team_name
+        )
+        highlights = tuple(
+            await find_youtube_video_link(
+                home_team_name,
+                away_team_name,
+                await get_previous_date(await get_current_date()),
+            )
         )
 
         result.append(
@@ -119,11 +121,7 @@ async def generate_result() -> list:
                     },
                     "Player": {"name": home_team_player_name},
                 },
-                "Highlights": await find_youtube_video_link(
-                    home_team_name,
-                    away_team_name,
-                    get_previous_date(get_current_date()),
-                ),
+                "Highlights": highlights,
             }
         )
 
@@ -132,16 +130,14 @@ async def generate_result() -> list:
 
 async def show_result(ctx: client) -> discord.Embed:
     today_, nba_score_results = (
-        get_current_date(),
+        await get_current_date(),
         await generate_result(),
     )
     embed = discord.Embed(
         title=f"NBA Results for {today_}",
         colour=discord.Colour.blue(),
     )
-    embed.set_thumbnail(
-        url="https://cdn.discordapp.com/attachments/983670671647313930/1057801162142777454/NBA.png"
-    )
+    embed.set_thumbnail(url=os.getenv("NBA_LOGO"))
     for show in nba_score_results:
         home_sing, away_sing = (
             ("", await find_emojis(ctx, "9410pinkarrowL"))
@@ -159,7 +155,7 @@ async def show_result(ctx: client) -> discord.Embed:
             f"{await find_emojis(ctx, show['Home']['Team']['name'])} ",
             value=f"**Game Leaders**\n{show['Away']['Player']['name']}\n"
             f"{show['Home']['Player']['name']}\n"
-            f"{await find_emojis(ctx, 'youtube')} **Highlights** {', '.join(generate_link(f'Link {pos}', link) for pos, link in enumerate(show['Highlights'], 1))}",
+            f"{await find_emojis(ctx, 'youtube')} **Highlights** {', '.join([await generate_link(f'Link {pos}', link) for pos, link in enumerate(show['Highlights'], 1)])}",
             inline=False,
         )
     return embed
@@ -167,8 +163,10 @@ async def show_result(ctx: client) -> discord.Embed:
 
 @tasks.loop(seconds=0)
 async def task_loop() -> None:
-    embed_result = await show_result(client.get_channel(int(os.getenv('MAIN_CHANNEL_DISCORD'))))
-    for id_channel in get_all_channels_id(client):
+    embed_result = await show_result(
+        client.get_channel(int(os.getenv("MAIN_CHANNEL_DISCORD")))
+    )
+    for id_channel in await get_all_channels_id(client):
         ctx = client.get_channel(id_channel)
         await ctx.send(embed=embed_result)
 
@@ -187,21 +185,19 @@ async def nba_start(ctx: client, time_value: float) -> None:
 
 @client.command()
 async def live(ctx: client) -> None:
-    live_games = scrape_all_games(os.getenv("NBA"))
+    live_games = await scrape_all_games(os.getenv("NBA"))
 
     embed = discord.Embed(
         title=f"NBA Live Games",
         colour=discord.Colour.blue(),
     )
-    embed.set_thumbnail(
-        url="https://cdn.discordapp.com/attachments/983670671647313930/1066494679866146866/live.gif"
-    )
+    embed.set_thumbnail(url=os.getenv("RESULT_LIVE_LOGO"))
 
     for k, v in live_games.items():
-        away_team, home_team = get_nba_team_names(k)
+        away_team, home_team = await get_nba_team_names(k)
         embed.add_field(
             name=f"{await find_emojis(ctx, away_team)} **{k}** {await find_emojis(ctx, home_team)}",
-            value=f"{await find_emojis(ctx, '3716_ArrowRightGlow')} {', '.join(generate_link_correct_len(v))}",
+            value=f"{await find_emojis(ctx, '3716_ArrowRightGlow')} {', '.join(await generate_link_correct_len(v))}",
             inline=False,
         )
 
