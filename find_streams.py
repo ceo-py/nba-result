@@ -2,15 +2,15 @@ import json
 import os
 
 from dotenv import load_dotenv
-from requests_html import AsyncHTMLSession
+from requests_html import HTMLSession
 
 
 load_dotenv()
-asession = AsyncHTMLSession()
+asession = HTMLSession()
 
 
-async def get_url(url: str) -> AsyncHTMLSession:
-    return await asession.get(url)
+def get_url(url: str) -> HTMLSession:
+    return asession.get(url)
 
 
 async def get_nba_team_names(data: str) -> tuple:
@@ -18,7 +18,7 @@ async def get_nba_team_names(data: str) -> tuple:
 
 
 async def generate_stream_data(url) -> dict:
-    file_html = (await get_url(url),)[0].text
+    file_html = get_url(url).text
     start_index = file_html.find(os.getenv("HTML_START_IND")) - 2
     end_index = file_html.find(os.getenv("HTML_END_IND")) - 22
     return json.loads(file_html[start_index:end_index])[os.getenv("HTML_START_IND")][
@@ -72,7 +72,7 @@ async def find_game_links(url) -> list:
     return result
 
 
-async def scrape_all_games(url: AsyncHTMLSession) -> dict:
+async def scrape_all_games(url: HTMLSession) -> dict:
     data = await generate_stream_data(url)
     games_location = data["events"]
     try_next_games = 0
@@ -98,5 +98,5 @@ async def scrape_all_games(url: AsyncHTMLSession) -> dict:
     return result
 
 
-def find_specific_game_all_sports(url: AsyncHTMLSession):
+def find_specific_game_all_sports(url: HTMLSession):
     ...

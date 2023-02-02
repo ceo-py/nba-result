@@ -61,7 +61,7 @@ async def find_youtube_video_link(
         game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{await convert_data_time(previous_date)}".replace(
             " ", "+"
         )
-        game_url_info = await get_url(
+        game_url_info = get_url(
             f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}{os.getenv('CRITERIA')}"
         )
         find_videos += re.findall(r"watch\?v=(\S{11})", game_url_info.text)
@@ -80,7 +80,7 @@ async def get_all_channels_id(client: client) -> tuple:
 async def generate_result() -> list:
     result = []
     team_scores, team_names, team_records, player_stats = await find_data_from(
-        await get_url(await generate_url())
+        get_url(await generate_url())
     )
     for i in range(0, len(team_scores), 2):
         away_team_name = team_names[i].text.split()[-1]
