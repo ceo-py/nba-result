@@ -13,7 +13,7 @@ from find_streams import (
 )
 
 client = commands.Bot(
-    command_prefix="?", help_command=None, intents=discord.Intents.all()
+    command_prefix="!", help_command=None, intents=discord.Intents.all()
 )
 
 
