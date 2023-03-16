@@ -42,12 +42,12 @@ async def find_emojis(ctx: client, look_for_emoji: str) -> str:
     return ""
 
 
-async def generate_players_information(data):
+async def generate_players_information(data: dict) -> map:
     return (f"{x['teamTricode']}/ {x['position']}/ {x['name']}: {x['points']}/ {x['rebounds']}/ {x['assists']}" for x in
             data.values())
 
 
-async def generate_team_names(data):
+async def generate_team_names(data: dict) -> str:
     return f"{data['wins']}-{data['losses']}", data['teamName'], int(data['score'])
 
 
