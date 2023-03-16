@@ -9,11 +9,11 @@ from find_streams import (
     generate_link_correct_len,
     os,
     generate_link,
-    get_nba_team_names,
+    get_nba_team_names, json
 )
 
 client = commands.Bot(
-    command_prefix="!", help_command=None, intents=discord.Intents.all()
+    command_prefix="?", help_command=None, intents=discord.Intents.all()
 )
 
 
@@ -42,14 +42,24 @@ async def find_emojis(ctx: client, look_for_emoji: str) -> str:
     return ""
 
 
+async def generate_players_information(data):
+    return (f"{x['teamTricode']}/ {x['position']}/ {x['name']}: {x['points']}/ {x['rebounds']}/ {x['assists']}" for x in
+            data.values())
+
+
+async def generate_team_names(data):
+    return f"{data['wins']}-{data['losses']}", data['teamName'], int(data['score'])
+
+
+
 async def generate_player_output(player_data: str, team_name: str) -> str:
-    data = player_data.split("\n")
-    player_link = await generate_link(data[0], os.getenv("TEAM_URL") + team_name)
-    return f"{player_link} {data[-3]}/{data[-2]}/{data[-1]}"
-
-
-async def find_data_from(url: object) -> tuple:
-    return (url.html.find(f"{x}") for x in os.getenv("LOOK_FOR_DATA").split(", "))
+    data = player_data.split(": ")
+    player_link = await generate_link(data[0].split('/ ')[-1], os.getenv("TEAM_URL") + team_name)
+    return f"{'/ '.join(data[0].split('/ ')[:-1])} {player_link} {data[1]}"
+#
+#
+# async def find_data_from(url: object) -> tuple:
+#     return (url.html.find(f"{x}") for x in os.getenv("LOOK_FOR_DATA").split(", "))
 
 
 async def find_youtube_video_link(
@@ -79,21 +89,19 @@ async def get_all_channels_id(client: client) -> tuple:
 
 async def generate_result() -> list:
     result = []
-    team_scores, team_names, team_records, player_stats = await find_data_from(
-        get_url(await generate_url())
-    )
-    for i in range(0, len(team_scores), 2):
-        away_team_name = team_names[i].text.split()[-1]
-        home_team_name = team_names[i + 1].text.split()[-1]
-        away_team_record = team_records[i].text
-        home_team_record = team_records[i + 1].text
-        away_team_score = team_scores[i].text
-        home_team_score = team_scores[i + 1].text
+    data = json.loads(get_url(await generate_url()).html.find('#__NEXT_DATA__')[0].text)
+    all_game_results = data['props']['pageProps']['games']
+
+
+    for item in all_game_results:
+        home_team_player_name, away_team_player_name = await generate_players_information(item['gameLeaders'])
+        home_team_record, home_team_name, home_team_score = await generate_team_names(item['homeTeam'])
+        away_team_record, away_team_name, away_team_score = await generate_team_names(item['awayTeam'])
         away_team_player_name = await generate_player_output(
-            player_stats[i].text, away_team_name
+            away_team_player_name, away_team_name
         )
         home_team_player_name = await generate_player_output(
-            player_stats[i + 1].text, home_team_name
+            home_team_player_name, home_team_name
         )
         highlights = tuple(
             await find_youtube_video_link(
