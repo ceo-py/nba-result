@@ -98,10 +98,10 @@ async def generate_result() -> list:
         home_team_record, home_team_name, home_team_score = await generate_team_names(item['homeTeam'])
         away_team_record, away_team_name, away_team_score = await generate_team_names(item['awayTeam'])
         away_team_player_name = await generate_player_output(
-            away_team_player_name, away_team_name.split(' ')[-1]
+            away_team_player_name, away_team_name.split()[-1]
         )
         home_team_player_name = await generate_player_output(
-            home_team_player_name, home_team_name.split(' ')[-1]
+            home_team_player_name, home_team_name.split()[-1]
         )
         highlights = tuple(
             await find_youtube_video_link(
