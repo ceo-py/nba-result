@@ -1,81 +1,18 @@
-import datetime
 import discord
-import re
+import date.date_manipulations as date
+import os
+import generate_information.generator as generate
 
+from emojis.find_emojis import find_emojis
 from discord.ext import commands, tasks
-from find_streams import (
-    scrape_all_games,
-    get_url,
-    generate_link_correct_len,
-    os,
-    generate_link,
-    get_nba_team_names, json
+from embeds.daily_result_nba_embed import (
+    generate_result_embed,
+    generate_result_field_for_embed,
 )
 
 client = commands.Bot(
     command_prefix="!", help_command=None, intents=discord.Intents.all()
 )
-
-
-async def get_current_date() -> str:
-    return datetime.date.today()
-
-
-async def get_previous_date(current_date: str) -> datetime:
-    return current_date - datetime.timedelta(days=1)
-
-
-async def convert_data_time(data_to_convert: datetime) -> str:
-    return (
-        f"{data_to_convert.strftime('%b')}+{data_to_convert.day}+{data_to_convert.year}"
-    )
-
-
-async def generate_url() -> str:
-    return f"{os.getenv('START_URL_GAMES')}{await get_previous_date(await get_current_date())}"
-
-
-async def find_emojis(ctx: client, look_for_emoji: str) -> str:
-    for emoji in ctx.guild.emojis:
-        if look_for_emoji in emoji.name:
-            return str(emoji)
-    return ""
-
-
-async def generate_players_information(data: dict) -> map:
-    return (f"{x['teamTricode']}/ {x['position']}/ {x['name']}: {x['points']}/ {x['rebounds']}/ {x['assists']}" for x in
-            data.values())
-
-
-async def generate_team_names(data: dict) -> str:
-    return f"{data['wins']}-{data['losses']}", data['teamName'], int(data['score'])
-
-
-
-async def generate_player_output(player_data: str, team_name: str) -> str:
-    data = player_data.split(": ")
-    player_link = await generate_link(data[0].split('/ ')[-1], os.getenv("TEAM_URL") + team_name)
-    return f"{'/ '.join(data[0].split('/ ')[:-1])} {player_link} {data[1]}"
-#
-#
-# async def find_data_from(url: object) -> tuple:
-#     return (url.html.find(f"{x}") for x in os.getenv("LOOK_FOR_DATA").split(", "))
-
-
-async def find_youtube_video_link(
-    home_team: str, away_team: str, previous_date: str
-) -> tuple:
-
-    find_videos = []
-    for channel in os.getenv("VIDEO_CHANNELS").split(", "):
-        game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{await convert_data_time(previous_date)}".replace(
-            " ", "+"
-        )
-        game_url_info = get_url(
-            f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}{os.getenv('CRITERIA')}"
-        )
-        find_videos += re.findall(r"watch\?v=(\S{11})", game_url_info.text)
-    return (f"{os.getenv('YOUTUBE_VIDEO_LINK')}{x}" for x in find_videos[:5])
 
 
 async def get_all_channels_id(client: client) -> tuple:
@@ -87,86 +24,22 @@ async def get_all_channels_id(client: client) -> tuple:
     )
 
 
-async def generate_result() -> list:
-    result = []
-    data = json.loads(get_url(await generate_url()).html.find('#__NEXT_DATA__')[0].text)
-    all_game_results = data['props']['pageProps']['games']
-
-
-    for item in all_game_results:
-        home_team_player_name, away_team_player_name = await generate_players_information(item['gameLeaders'])
-        home_team_record, home_team_name, home_team_score = await generate_team_names(item['homeTeam'])
-        away_team_record, away_team_name, away_team_score = await generate_team_names(item['awayTeam'])
-        away_team_player_name = await generate_player_output(
-            away_team_player_name, away_team_name.split()[-1]
-        )
-        home_team_player_name = await generate_player_output(
-            home_team_player_name, home_team_name.split()[-1]
-        )
-        highlights = tuple(
-            await find_youtube_video_link(
-                home_team_name,
-                away_team_name,
-                await get_previous_date(await get_current_date()),
-            )
-        )
-
-        result.append(
-            {
-                f"Away": {
-                    "Team": {
-                        "name": away_team_name,
-                        "record": away_team_record,
-                        "score": int(away_team_score),
-                    },
-                    "Player": {"name": away_team_player_name},
-                },
-                f"Home": {
-                    "Team": {
-                        "name": home_team_name,
-                        "record": home_team_record,
-                        "score": int(home_team_score),
-                    },
-                    "Player": {"name": home_team_player_name},
-                },
-                "Highlights": highlights,
-            }
-        )
-
-    return result
-
-
 async def show_result(ctx: client) -> discord.Embed:
     today_, nba_score_results = (
-        await get_current_date(),
-        await generate_result(),
+        await date.get_current_date(),
+        await generate.generate_result(),
     )
-    embed = discord.Embed(
-        title=f"NBA Results for {today_}",
-        colour=discord.Colour.blue(),
-    )
-    embed.set_thumbnail(url=os.getenv("NBA_LOGO"))
-    for show in nba_score_results:
-        home_sing, away_sing = (
-            ("", await find_emojis(ctx, "9410pinkarrowL"))
-            if show["Home"]["Team"]["score"] > show["Away"]["Team"]["score"]
-            else (await find_emojis(ctx, "9410pinkarrowR"), "")
-        )
 
-        embed.add_field(
-            name=f"{await find_emojis(ctx, show['Away']['Team']['name'])} "
-            f"({show['Away']['Team']['record']}) "
-            f"{show['Away']['Team']['name'].upper()}{home_sing} {show['Away']['Team']['score']} @ "
-            f"{show['Home']['Team']['score']} "
-            f"{away_sing}{show['Home']['Team']['name'].upper()}"
-            f" ({show['Home']['Team']['record']}) "
-            f"{await find_emojis(ctx, show['Home']['Team']['name'])} ",
-            value=f"**Game Leaders**\n{show['Away']['Player']['name']}\n"
-            f"{show['Home']['Player']['name']}\n"
-            f"{await find_emojis(ctx, 'youtube')} **Highlights** {', '.join([await generate_link(f'Link {pos}', link) for pos, link in enumerate(show['Highlights'], 1)])}",
-            inline=False,
-        )
-    return embed
+    embeds = [generate_result_embed(today_, os.getenv("NBA_LOGO"))]
+    for show in nba_score_results[:10]:
+        await generate_result_field_for_embed(ctx, show, embeds[0])
+
+    if len(nba_score_results) > 10:
+        embeds.append(generate_result_embed(today_, os.getenv("NBA_LOGO")))
+        for show in nba_score_results[10:]:
+            await generate_result_field_for_embed(ctx, show, embeds[1])
+
+    return embeds
 
 
 @tasks.loop(seconds=0)
@@ -175,8 +48,10 @@ async def task_loop() -> None:
         client.get_channel(int(os.getenv("MAIN_CHANNEL_DISCORD")))
     )
     for id_channel in await get_all_channels_id(client):
+        # if int(os.getenv("MAIN_CHANNEL_DISCORD")) == id_channel:  # dev test func
         ctx = client.get_channel(id_channel)
-        await ctx.send(embed=embed_result)
+        for embed in embed_result:
+            await ctx.send(embed=embed)
 
 
 @client.command()
@@ -193,7 +68,7 @@ async def nba_start(ctx: client, time_value: float) -> None:
 
 @client.command()
 async def live(ctx: client) -> None:
-    live_games = await scrape_all_games(os.getenv("NBA"))
+    live_games = await generate.scrape_all_games(os.getenv("NBA"))
 
     embed = discord.Embed(
         title=f"NBA Live Games",
@@ -202,10 +77,10 @@ async def live(ctx: client) -> None:
     embed.set_thumbnail(url=os.getenv("RESULT_LIVE_LOGO"))
 
     for k, v in live_games.items():
-        away_team, home_team = await get_nba_team_names(k)
+        away_team, home_team = await generate.get_nba_team_names(k)
         embed.add_field(
             name=f"{await find_emojis(ctx, away_team)} **{k}** {await find_emojis(ctx, home_team)}",
-            value=f"{await find_emojis(ctx, '3716_ArrowRightGlow')} {', '.join(await generate_link_correct_len(v))}",
+            value=f"{await find_emojis(ctx, '3716_ArrowRightGlow')} {', '.join(await generate.generate_link_correct_len(v))}",
             inline=False,
         )
 
