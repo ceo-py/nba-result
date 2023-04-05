@@ -31,12 +31,12 @@ async def show_result(ctx: client) -> discord.Embed:
     )
 
     embeds = [generate_result_embed(today_, os.getenv("NBA_LOGO"))]
-    for show in nba_score_results[:10]:
+    for show in nba_score_results[:8]:
         await generate_result_field_for_embed(ctx, show, embeds[0])
 
-    if len(nba_score_results) > 10:
+    if len(nba_score_results) > 8:
         embeds.append(generate_result_embed(today_, os.getenv("NBA_LOGO")))
-        for show in nba_score_results[10:]:
+        for show in nba_score_results[8:]:
             await generate_result_field_for_embed(ctx, show, embeds[1])
 
     return embeds
