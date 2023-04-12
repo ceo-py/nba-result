@@ -30,6 +30,9 @@ async def show_result(ctx: client) -> discord.Embed:
         await generate.generate_result(),
     )
 
+    if not nba_score_results:
+        return
+
     embeds = [generate_result_embed(today_, os.getenv("NBA_LOGO"))]
     for show in nba_score_results[:8]:
         await generate_result_field_for_embed(ctx, show, embeds[0])
@@ -47,6 +50,10 @@ async def task_loop() -> None:
     embed_result = await show_result(
         client.get_channel(int(os.getenv("MAIN_CHANNEL_DISCORD")))
     )
+
+    if not embed_result:
+        return
+
     for id_channel in await get_all_channels_id(client):
         # if int(os.getenv("MAIN_CHANNEL_DISCORD")) == id_channel:  # dev test func
         ctx = client.get_channel(id_channel)
