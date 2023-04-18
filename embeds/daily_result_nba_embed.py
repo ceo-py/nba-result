@@ -31,6 +31,6 @@ async def generate_result_field_for_embed(ctx, show, embed):
         f"{await find_emojis(ctx, show['Home']['Team']['name'])} ",
         value=f"**Game Leaders**\n{show['Away']['Player']['name']}\n"
         f"{show['Home']['Player']['name']}\n"
-        f"{await find_emojis(ctx, 'youtube')} **Highlights** {', '.join([await generate_link(f'Link {pos}', link) for pos, link in enumerate(show['Highlights'], 1)])}",
+        f"{await find_emojis(ctx, 'youtube')} **Highlights** {', '.join([await generate_link(f'Link', link) + f' {pos}' for pos, link in enumerate(show['Highlights'], 1)])}",
         inline=False,
     )
