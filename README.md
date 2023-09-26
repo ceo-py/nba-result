@@ -17,11 +17,4 @@ Every day after the games are finished, you will receive a message like the one 
 ![image](https://cdn.discordapp.com/attachments/983670671647313930/1065211029967089674/image.png)
 
 
-```code
-!live
-```
-With that command if there are live NBA games at the moment you call the command, it will generate you several stream links.
-
-![image](https://cdn.discordapp.com/attachments/983670671647313930/1066505011355472002/image.png)
-
 If you want to see the bot in action, you can do that here - https://discord.gg/gCcfWpMCgE
