@@ -20,7 +20,7 @@ async def get_all_channels_id(client: client) -> tuple:
         channel.id
         for server in client.guilds
         for channel in server.channels
-        if channel.name == os.getenv("DISCORD_CHANNEL_NAME")
+        if os.getenv("DISCORD_CHANNEL_NAME") in channel.name
     )
 
 
@@ -55,10 +55,13 @@ async def task_loop() -> None:
         return
 
     for id_channel in await get_all_channels_id(client):
-        # if int(os.getenv("MAIN_CHANNEL_DISCORD")) == id_channel:  # dev test func
-        ctx = client.get_channel(id_channel)
-        for embed in embed_result:
-            await ctx.send(embed=embed)
+        # if not int(os.getenv("MAIN_CHANNEL_DISCORD")) == id_channel:  # dev test func
+            ctx = client.get_channel(id_channel)
+            for embed in embed_result:
+                try:
+                    await ctx.send(embed=embed)
+                except Exception as e:
+                    print(f"An error occurred id {id_channel}: {e}")
 
 
 @client.command()
@@ -73,25 +76,25 @@ async def nba_start(ctx: client, time_value: float) -> None:
         task_loop.start()
 
 
-@client.command()
-async def live(ctx: client) -> None:
-    live_games = await generate.scrape_all_games(os.getenv("NBA"))
-
-    embed = discord.Embed(
-        title=f"NBA Live Games",
-        colour=discord.Colour.blue(),
-    )
-    embed.set_thumbnail(url=os.getenv("RESULT_LIVE_LOGO"))
-
-    for k, v in live_games.items():
-        away_team, home_team = await generate.get_nba_team_names(k)
-        embed.add_field(
-            name=f"{await find_emojis(ctx, away_team)} **{k}** {await find_emojis(ctx, home_team)}",
-            value=f"{await find_emojis(ctx, '3716_ArrowRightGlow')} {', '.join(await generate.generate_link_correct_len(v))}",
-            inline=False,
-        )
-
-    await ctx.send(embed=embed)
+# @client.command()
+# async def live(ctx: client) -> None:
+#     live_games = await generate.scrape_all_games(os.getenv("NBA"))
+#
+#     embed = discord.Embed(
+#         title=f"NBA Live Games",
+#         colour=discord.Colour.blue(),
+#     )
+#     embed.set_thumbnail(url=os.getenv("RESULT_LIVE_LOGO"))
+#
+#     for k, v in live_games.items():
+#         away_team, home_team = await generate.get_nba_team_names(k)
+#         embed.add_field(
+#             name=f"{await find_emojis(ctx, away_team)} **{k}** {await find_emojis(ctx, home_team)}",
+#             value=f"{await find_emojis(ctx, '3716_ArrowRightGlow')} {', '.join(await generate.generate_link_correct_len(v))}",
+#             inline=False,
+#         )
+#
+#     await ctx.send(embed=embed)
 
 
 client.run(os.getenv("TOKEN"))
