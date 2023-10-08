@@ -1,8 +1,11 @@
 import datetime
 
 
+# async def get_current_date() -> str:
+#     return datetime.date.today()
+
 async def get_current_date() -> str:
-    return datetime.date.today()
+    return datetime.date.today() - datetime.timedelta(days=1)
 
 
 async def get_previous_date(current_date: str) -> datetime:
