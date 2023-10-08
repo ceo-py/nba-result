@@ -12,29 +12,43 @@ asession = HTMLSession()
 
 
 async def generate_url() -> str:
-    return f"{os.getenv('START_URL_GAMES')}{await date.get_previous_date(await date.get_current_date())}"
+    return f"{os.getenv('START_URL_GAMES')}{await date.get_current_date()}"
 
 
 async def generate_youtube_video_link(
     home_team: str, away_team: str, previous_date: str
 ) -> tuple:
-
+    result = set()
     find_videos = []
     for channel in os.getenv("VIDEO_CHANNELS").split(", "):
-        game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{await date.convert_data_time(previous_date)}".replace(
+        game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{await date.get_current_date()}".replace(
             " ", "+"
         )
+        # game_url_info = get_url(
+        #     f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}{os.getenv('CRITERIA')}"
+        # )
         game_url_info = get_url(
-            f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}{os.getenv('CRITERIA')}"
+            f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}"
         )
         find_videos += re.findall(r"watch\?v=(\S{11})", game_url_info.text)
-    return (f"{os.getenv('YOUTUBE_VIDEO_LINK')}{x}" for x in find_videos[:5])
 
+    for x in find_videos:
+        result.add(x)
+        if len(result) == 5:
+            break
+    return (f"{os.getenv('YOUTUBE_VIDEO_LINK')}{x}" for x in result)
+
+
+# async def generate_players_information(data: dict) -> map:
+#     return (
+#         f"{x['teamTricode']}/ {x['position']}/ {x['name']}: {x['points']}/ {x['rebounds']}/ {x['assists']}"
+#         for x in data.values()
+#     )
 
 async def generate_players_information(data: dict) -> map:
     return (
         f"{x['teamTricode']}/ {x['position']}/ {x['name']}: {x['points']}/ {x['rebounds']}/ {x['assists']}"
-        for x in data.values()
+        for x in data
     )
 
 
@@ -52,20 +66,41 @@ async def generate_player_output(player_data: str, team_name: str) -> str:
 
 async def generate_result() -> list:
     result = []
+    # data = json.loads(get_url(await generate_url()).html.find("#__NEXT_DATA__")[0].text)
     data = json.loads(get_url(await generate_url()).html.find("#__NEXT_DATA__")[0].text)
-    all_game_results = data["props"]["pageProps"]["games"]
+
+    try:
+        # all_game_results = data["props"]["pageProps"]["games"]
+        all_game_results = data['props']['pageProps']['gameCardFeed']['modules'][0]['cards']
+    except KeyError:
+        return
 
     for item in all_game_results:
+        home_team_data, away_team_data = item['cardData']['homeTeam'], item['cardData']['awayTeam']
+        # (
+        #     home_team_player_name,
+        #     away_team_player_name,
+        # ) = await generate_players_information(item["gameLeaders"])
         (
             home_team_player_name,
             away_team_player_name,
-        ) = await generate_players_information(item["gameLeaders"])
+        ) = await generate_players_information((home_team_data['teamLeader'], away_team_data['teamLeader']))
+
+        # home_team_record, home_team_name, home_team_score = await generate_team_names(
+        #     item["homeTeam"]
+        # )
+        # away_team_record, away_team_name, away_team_score = await generate_team_names(
+        #     item["awayTeam"]
+        # )
+
+
         home_team_record, home_team_name, home_team_score = await generate_team_names(
-            item["homeTeam"]
+            home_team_data
         )
         away_team_record, away_team_name, away_team_score = await generate_team_names(
-            item["awayTeam"]
+            away_team_data
         )
+
         away_team_player_name = await generate_player_output(
             away_team_player_name, away_team_name.split()[-1]
         )
@@ -76,7 +111,7 @@ async def generate_result() -> list:
             await generate_youtube_video_link(
                 home_team_name,
                 away_team_name,
-                await date.get_previous_date(await date.get_current_date()),
+                await date.get_current_date(),
             )
         )
 
