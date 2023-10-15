@@ -21,14 +21,17 @@ async def generate_youtube_video_link(
     result = set()
     find_videos = []
     for channel in os.getenv("VIDEO_CHANNELS").split(", "):
-        game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{await date.get_current_date()}".replace(
+        # game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}+{await date.get_current_date()}".replace(
+        #     " ", "+"
+        # )
+        game_url_you_tube = f"{channel}+Highlights+full+game+{home_team}+vs+{away_team}".replace(
             " ", "+"
         )
         # game_url_info = get_url(
         #     f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}{os.getenv('CRITERIA')}"
         # )
         game_url_info = get_url(
-            f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}"
+            f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}{os.getenv('CRITERIA')}"
         )
         find_videos += re.findall(r"watch\?v=(\S{11})", game_url_info.text)
 
