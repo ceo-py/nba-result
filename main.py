@@ -3,7 +3,6 @@ import date.date_manipulations as date
 import os
 import generate_information.generator as generate
 
-from emojis.find_emojis import find_emojis
 from discord.ext import commands, tasks
 from embeds.daily_result_nba_embed import (
     generate_result_embed,
@@ -55,7 +54,7 @@ async def task_loop() -> None:
         return
 
     for id_channel in await get_all_channels_id(client):
-        # if not int(os.getenv("MAIN_CHANNEL_DISCORD")) == id_channel:  # dev test func
+        # if not int(os.getenv("TEST_CHANNEL_DISCORD")) == id_channel:  # dev test func
             ctx = client.get_channel(id_channel)
             for embed in embed_result:
                 try:
