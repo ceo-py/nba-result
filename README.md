@@ -14,7 +14,7 @@ nba-result
 
 Every day after the games are finished, you will receive a message like the one below.
 
-![image](https://cdn.discordapp.com/attachments/983670671647313930/1065211029967089674/image.png)
+![image](https://github.com/ceo-py/Project-Pictures/blob/main/nba-result/result_show.png?raw=true)
 
 
 If you want to see the bot in action, you can do that here - https://discord.gg/gCcfWpMCgE
