@@ -75,8 +75,9 @@ async def generate_result() -> list:
     try:
         # all_game_results = data["props"]["pageProps"]["games"]
         all_game_results = data['props']['pageProps']['gameCardFeed']['modules'][0]['cards']
-    except KeyError:
-        return
+    except Exception as e:
+        print(e)
+        return result
 
     for item in all_game_results:
         home_team_data, away_team_data = item['cardData']['homeTeam'], item['cardData']['awayTeam']
