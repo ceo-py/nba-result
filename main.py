@@ -46,21 +46,24 @@ async def show_result(ctx: client) -> discord.Embed:
 
 @tasks.loop(seconds=0)
 async def task_loop() -> None:
-    embed_result = await show_result(
-        client.get_channel(int(os.getenv("MAIN_CHANNEL_DISCORD")))
-    )
+    try:
+        embed_result = await show_result(
+            client.get_channel(int(os.getenv("MAIN_CHANNEL_DISCORD")))
+        )
 
-    if not embed_result:
-        return
+        if not embed_result:
+            return
 
-    for id_channel in await get_all_channels_id(client):
-        # if not int(os.getenv("TEST_CHANNEL_DISCORD")) == id_channel:  # dev test func
-            ctx = client.get_channel(id_channel)
-            for embed in embed_result:
-                try:
-                    await ctx.send(embed=embed)
-                except Exception as e:
-                    print(f"An error occurred id {id_channel}: {e}")
+        for id_channel in await get_all_channels_id(client):
+            # if not int(os.getenv("TEST_CHANNEL_DISCORD")) == id_channel:  # dev test func
+                ctx = client.get_channel(id_channel)
+                for embed in embed_result:
+                    try:
+                        await ctx.send(embed=embed)
+                    except Exception as e:
+                        print(f"An error occurred id {id_channel}: {e}")
+    except Exception as e:
+        print(f"Exception in the task_loop: {e}")
 
 
 @client.command()
