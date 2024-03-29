@@ -1,3 +1,5 @@
+from datetime import timezone, time
+
 import discord
 import date.date_manipulations as date
 import os
@@ -8,10 +10,46 @@ from embeds.daily_result_nba_embed import (
     generate_result_embed,
     generate_result_field_for_embed,
 )
+utc = timezone.utc
 
-client = commands.Bot(
-    command_prefix="!", help_command=None, intents=discord.Intents.all()
-)
+
+class ClientInit(commands.Bot):
+    def __init__(self):
+        intents = discord.Intents.all()
+        super().__init__(command_prefix="!", help_command=None, intents=intents)
+
+    async def on_ready(self):
+        self.scheduler_results.start()
+
+    def scheduler_results_unload(self):
+        self.scheduler_results.cancel()
+
+    @tasks.loop(time=time(hour=7, tzinfo=utc))
+    async def scheduler_results(self):
+        try:
+            embed_result = await show_result(
+                self.get_channel(int(os.getenv("MAIN_CHANNEL_DISCORD")))
+            )
+
+            if not embed_result:
+                return
+
+            for id_channel in await get_all_channels_id(self):
+                # dev test func
+                # if not int(os.getenv("TEST_CHANNEL_DISCORD")) == id_channel:
+                #     continue
+
+                ctx = self.get_channel(id_channel)
+                for embed in embed_result:
+                    try:
+                        await ctx.send(embed=embed)
+                    except Exception as e:
+                        print(f"An error occurred id {id_channel}: {e}")
+        except Exception as e:
+            print(f"Exception in the task_loop: {e}")
+
+
+client = ClientInit()
 
 
 async def get_all_channels_id(client: client) -> tuple:
@@ -44,38 +82,38 @@ async def show_result(ctx: client) -> discord.Embed:
     return embeds
 
 
-@tasks.loop(seconds=0)
-async def task_loop() -> None:
-    try:
-        embed_result = await show_result(
-            client.get_channel(int(os.getenv("MAIN_CHANNEL_DISCORD")))
-        )
+# @tasks.loop(seconds=0)
+# async def task_loop() -> None:
+#     try:
+#         embed_result = await show_result(
+#             client.get_channel(int(os.getenv("MAIN_CHANNEL_DISCORD")))
+#         )
+#
+#         if not embed_result:
+#             return
+#
+#         for id_channel in await get_all_channels_id(client):
+#             # if not int(os.getenv("TEST_CHANNEL_DISCORD")) == id_channel:  # dev test func
+#             ctx = client.get_channel(id_channel)
+#             for embed in embed_result:
+#                 try:
+#                     await ctx.send(embed=embed)
+#                 except Exception as e:
+#                     print(f"An error occurred id {id_channel}: {e}")
+#     except Exception as e:
+#         print(f"Exception in the task_loop: {e}")
 
-        if not embed_result:
-            return
 
-        for id_channel in await get_all_channels_id(client):
-            # if not int(os.getenv("TEST_CHANNEL_DISCORD")) == id_channel:  # dev test func
-                ctx = client.get_channel(id_channel)
-                for embed in embed_result:
-                    try:
-                        await ctx.send(embed=embed)
-                    except Exception as e:
-                        print(f"An error occurred id {id_channel}: {e}")
-    except Exception as e:
-        print(f"Exception in the task_loop: {e}")
-
-
-@client.command()
-async def nba_start(ctx: client, time_value: float) -> None:
-    if str(ctx.author) == os.getenv("OWNER"):
-        task_loop.change_interval(hours=float(time_value))
-        if task_loop.next_iteration:
-            task_loop.cancel()
-        await ctx.send(
-            f"```It's set on every {int(time_value)}h to show the results!```"
-        )
-        task_loop.start()
+# @client.command()
+# async def nba_start(ctx: client, time_value: float) -> None:
+#     if str(ctx.author) == os.getenv("OWNER"):
+#         task_loop.change_interval(hours=float(time_value))
+#         if task_loop.next_iteration:
+#             task_loop.cancel()
+#         await ctx.send(
+#             f"```It's set on every {int(time_value)}h to show the results!```"
+#         )
+#         task_loop.start()
 
 
 # @client.command()

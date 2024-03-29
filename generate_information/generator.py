@@ -64,7 +64,7 @@ async def generate_player_output(player_data: str, team_name: str) -> str:
     player_link = await generate_link(
         data[0].split("/ ")[-1], os.getenv("TEAM_URL") + team_name
     )
-    return f"{'/ '.join(data[0].split('/ ')[:-1])} {player_link} {data[1]}"
+    return f" - {'/ '.join(data[0].split('/ ')[:-1])} {player_link} {data[1]}"
 
 
 async def generate_result() -> list:
