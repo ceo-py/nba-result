@@ -75,9 +75,10 @@ async def generate_result() -> list:
     try:
         # all_game_results = data["props"]["pageProps"]["games"]
         all_game_results = data['props']['pageProps']['gameCardFeed']['modules'][0]['cards']
+        games_type = all_game_results[0]["cardData"]["seasonType"]
     except Exception as e:
         print(e)
-        return result
+        return result, None
 
     for item in all_game_results:
         home_team_data, away_team_data = item['cardData']['homeTeam'], item['cardData']['awayTeam']
@@ -141,7 +142,7 @@ async def generate_result() -> list:
             }
         )
 
-    return result
+    return result, games_type
 
 
 def get_url(url: str) -> HTMLSession:

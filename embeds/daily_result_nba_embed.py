@@ -3,9 +3,9 @@ from emojis.find_emojis import find_emojis
 from generate_information.generator import generate_link
 
 
-def generate_result_embed(date_today, logo_url):
+def generate_result_embed(date_today, logo_url, game_type):
     embed = discord.Embed(
-        title=f"NBA Results for {date_today}",
+        title=f"NBA {game_type} Results for {date_today}",
         colour=discord.Colour.blue(),
     )
     embed.set_thumbnail(url=logo_url)

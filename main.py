@@ -62,7 +62,7 @@ async def get_all_channels_id(client: client) -> tuple:
 
 
 async def show_result(ctx: client) -> discord.Embed:
-    today_, nba_score_results = (
+    today_, nba_score_results, games_type = (
         await date.get_current_date(),
         await generate.generate_result(),
     )
@@ -70,12 +70,12 @@ async def show_result(ctx: client) -> discord.Embed:
     if not nba_score_results:
         return
 
-    embeds = [generate_result_embed(today_, os.getenv("NBA_LOGO"))]
+    embeds = [generate_result_embed(today_, os.getenv("NBA_LOGO", games_type))]
     for show in nba_score_results[:8]:
         await generate_result_field_for_embed(ctx, show, embeds[0])
 
     if len(nba_score_results) > 8:
-        embeds.append(generate_result_embed(today_, os.getenv("NBA_LOGO")))
+        embeds.append(generate_result_embed(today_, os.getenv("NBA_LOGO"), games_type))
         for show in nba_score_results[8:]:
             await generate_result_field_for_embed(ctx, show, embeds[1])
 
