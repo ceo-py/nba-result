@@ -64,7 +64,7 @@ async def get_all_channels_id(client: client) -> tuple:
 async def show_result(ctx: client) -> discord.Embed:
     today_, nba_score_results, games_type = (
         await date.get_current_date(),
-        await generate.generate_result(),
+        *await generate.generate_result(),
     )
 
     if not nba_score_results:
