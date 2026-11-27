@@ -1,3 +1,4 @@
+import asyncio
 import date.date_manipulations as date
 import re
 import json
@@ -9,6 +10,9 @@ from requests_html import HTMLSession
 
 load_dotenv()
 asession = HTMLSession()
+
+# No timeout meant a hung connection blocked the event loop forever.
+REQUEST_TIMEOUT = 30
 
 
 async def generate_url() -> str:
@@ -30,7 +34,7 @@ async def generate_youtube_video_link(
         # game_url_info = get_url(
         #     f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}{os.getenv('CRITERIA')}"
         # )
-        game_url_info = get_url(
+        game_url_info = await get_url(
             f"{os.getenv('YOUTUBE_SEARCH_LINK')}{game_url_you_tube}{os.getenv('CRITERIA')}"
         )
         find_videos += re.findall(r"watch\?v=(\S{11})", game_url_info.text)
@@ -70,7 +74,7 @@ async def generate_player_output(player_data: str, team_name: str) -> str:
 async def generate_result() -> list:
     result = []
     # data = json.loads(get_url(await generate_url()).html.find("#__NEXT_DATA__")[0].text)
-    data = json.loads(get_url(await generate_url()).html.find("#__NEXT_DATA__")[0].text)
+    data = json.loads((await get_url(await generate_url())).html.find("#__NEXT_DATA__")[0].text)
 
     try:
         # all_game_results = data["props"]["pageProps"]["games"]
@@ -79,78 +83,95 @@ async def generate_result() -> list:
         if not all_game_results:
             print(f"No games scheduled for {await date.get_current_date()}")
             return result, None
-        games_type = all_game_results[0]["cardData"]["seasonType"]
     except Exception as e:
         print(f"Failed to read games data: {e}")
         return result, None
 
+    # The season type lives on the card, so take it from the first card that has one.
+    games_type = None
     for item in all_game_results:
-        home_team_data, away_team_data = item['cardData']['homeTeam'], item['cardData']['awayTeam']
-        # (
-        #     home_team_player_name,
-        #     away_team_player_name,
-        # ) = await generate_players_information(item["gameLeaders"])
-        (
-            home_team_player_name,
-            away_team_player_name,
-        ) = await generate_players_information((home_team_data['teamLeader'], away_team_data['teamLeader']))
+        try:
+            games_type = item["cardData"]["seasonType"]
+            break
+        except Exception:
+            continue
 
-        # home_team_record, home_team_name, home_team_score = await generate_team_names(
-        #     item["homeTeam"]
-        # )
-        # away_team_record, away_team_name, away_team_score = await generate_team_names(
-        #     item["awayTeam"]
-        # )
+    for item in all_game_results:
+        try:
+            home_team_data, away_team_data = item['cardData']['homeTeam'], item['cardData']['awayTeam']
+            # (
+            #     home_team_player_name,
+            #     away_team_player_name,
+            # ) = await generate_players_information(item["gameLeaders"])
+            (
+                home_team_player_name,
+                away_team_player_name,
+            ) = await generate_players_information((home_team_data['teamLeader'], away_team_data['teamLeader']))
+
+            # home_team_record, home_team_name, home_team_score = await generate_team_names(
+            #     item["homeTeam"]
+            # )
+            # away_team_record, away_team_name, away_team_score = await generate_team_names(
+            #     item["awayTeam"]
+            # )
 
 
-        home_team_record, home_team_name, home_team_score = await generate_team_names(
-            home_team_data
-        )
-        away_team_record, away_team_name, away_team_score = await generate_team_names(
-            away_team_data
-        )
-
-        away_team_player_name = await generate_player_output(
-            away_team_player_name, away_team_name.split()[-1]
-        )
-        home_team_player_name = await generate_player_output(
-            home_team_player_name, home_team_name.split()[-1]
-        )
-        highlights = tuple(
-            await generate_youtube_video_link(
-                home_team_name,
-                away_team_name,
-                await date.get_current_date(),
+            home_team_record, home_team_name, home_team_score = await generate_team_names(
+                home_team_data
             )
-        )
+            away_team_record, away_team_name, away_team_score = await generate_team_names(
+                away_team_data
+            )
 
-        result.append(
-            {
-                f"Away": {
-                    "Team": {
-                        "name": away_team_name,
-                        "record": away_team_record,
-                        "score": int(away_team_score),
+            away_team_player_name = await generate_player_output(
+                away_team_player_name, away_team_name.split()[-1]
+            )
+            home_team_player_name = await generate_player_output(
+                home_team_player_name, home_team_name.split()[-1]
+            )
+            try:
+                highlights = tuple(
+                    await generate_youtube_video_link(
+                        home_team_name,
+                        away_team_name,
+                        await date.get_current_date(),
+                    )
+                )
+            except Exception as e:
+                print(f"No highlights for {home_team_name} vs {away_team_name}: {e}")
+                highlights = ()
+
+            result.append(
+                {
+                    f"Away": {
+                        "Team": {
+                            "name": away_team_name,
+                            "record": away_team_record,
+                            "score": int(away_team_score),
+                        },
+                        "Player": {"name": away_team_player_name},
                     },
-                    "Player": {"name": away_team_player_name},
-                },
-                f"Home": {
-                    "Team": {
-                        "name": home_team_name,
-                        "record": home_team_record,
-                        "score": int(home_team_score),
+                    f"Home": {
+                        "Team": {
+                            "name": home_team_name,
+                            "record": home_team_record,
+                            "score": int(home_team_score),
+                        },
+                        "Player": {"name": home_team_player_name},
                     },
-                    "Player": {"name": home_team_player_name},
-                },
-                "Highlights": highlights,
-            }
-        )
+                    "Highlights": highlights,
+                }
+            )
+        except Exception as e:
+            # One unusable card must not cost us every other game that day.
+            print(f"Skipped a game with unexpected data: {e}")
 
     return result, games_type
 
 
-def get_url(url: str) -> HTMLSession:
-    return asession.get(url)
+async def get_url(url: str) -> HTMLSession:
+    # requests_html is blocking, so run it in a thread and never let it hang forever.
+    return await asyncio.to_thread(asession.get, url, timeout=REQUEST_TIMEOUT)
 
 
 async def get_nba_team_names(data: str) -> tuple:
@@ -158,7 +179,7 @@ async def get_nba_team_names(data: str) -> tuple:
 
 
 async def generate_stream_data(url) -> dict:
-    file_html = get_url(url).text
+    file_html = (await get_url(url)).text
     start_index = file_html.find(os.getenv("HTML_START_IND")) - 2
     end_index = file_html.find(os.getenv("HTML_END_IND")) - 22
     return json.loads(file_html[start_index:end_index])[os.getenv("HTML_START_IND")][

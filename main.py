@@ -1,4 +1,4 @@
-from datetime import timezone, time
+from datetime import time
 from zoneinfo import ZoneInfo
 
 
@@ -12,7 +12,6 @@ from embeds.daily_result_nba_embed import (
     generate_result_embed,
     generate_result_field_for_embed,
 )
-utc = timezone.utc
 local_tz = ZoneInfo("Europe/Sofia")   # 08:30 local, DST-proof
 
 class ClientInit(commands.Bot):
@@ -22,7 +21,9 @@ class ClientInit(commands.Bot):
 
     async def on_ready(self):
         #await self.test_results()
-        self.scheduler_results.start()
+        # on_ready fires again on every reconnect, and starting a running task raises.
+        if not self.scheduler_results.is_running():
+            self.scheduler_results.start()
 
     def scheduler_results_unload(self):
         self.scheduler_results.cancel()
