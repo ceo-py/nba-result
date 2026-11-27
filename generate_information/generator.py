@@ -74,10 +74,14 @@ async def generate_result() -> list:
 
     try:
         # all_game_results = data["props"]["pageProps"]["games"]
-        all_game_results = data['props']['pageProps']['gameCardFeed']['modules'][0]['cards']
+        modules = data['props']['pageProps']['gameCardFeed']['modules']
+        all_game_results = modules[0]['cards'] if modules else []
+        if not all_game_results:
+            print(f"No games scheduled for {await date.get_current_date()}")
+            return result, None
         games_type = all_game_results[0]["cardData"]["seasonType"]
     except Exception as e:
-        print(e)
+        print(f"Failed to read games data: {e}")
         return result, None
 
     for item in all_game_results:
